@@ -1,4 +1,5 @@
 ﻿# Tasker  
+Tasker © 2024 by Rob Uttley is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/
 
 * command-line, Windows & Mac  
 * just needs to be somewhere on the system path  

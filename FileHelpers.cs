@@ -1,12 +1,6 @@
-﻿using System.CommandLine;
-using System.CommandLine.Invocation;
-using CsvHelper;
-using System.IO;
-using System.Globalization;
-using System;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
-using System.Threading.Tasks;
-using System.Net;
+using System.Globalization;
 
 namespace Tasker
 {
@@ -15,15 +9,17 @@ namespace Tasker
 
         private static string GetTasksFile()
         {
+            //todo take a cue from config if available
             //todo go find this in the regular places if not in immediate dir
-            return Path.Combine(Directory.GetCurrentDirectory(), "tasks.txt");
+            return Path.Combine(Directory.GetCurrentDirectory(), _tasksfile);
         }
 
 
         private static string GetDoneFile()
         {
+            //todo take a cue from config if available
             //todo go find this in the regular places if not in immediate dir
-            return Path.Combine(Directory.GetCurrentDirectory(), "done.txt");
+            return Path.Combine(Directory.GetCurrentDirectory(), _donefile);
         }
 
 
@@ -42,18 +38,28 @@ namespace Tasker
         private static string GetDailyBackupTasksName()
         {
             var name = Path.GetDirectoryName(GetTasksFile());
-            var date = DateTime.Today.AddDays(-1);
-            var bak = $"{date:yyyy-MM-dd}_tasks.txt";
-            return Path.Combine(name, bak);
+            if (name != null)
+            {
+                var date = DateTime.Today.AddDays(-1);
+                var bak = $"{date:yyyy-MM-dd}_tasks.txt";
+                return Path.Combine(name, bak);
+            }
+            GeneralError("Unable to resolve tasks file name");
+            return string.Empty;
         }
 
 
         private static string GetDailyBackupDoneName()
         {
             var name = Path.GetDirectoryName(GetDoneFile());
-            var date = DateTime.Today.AddDays(-1);
-            var bak = $"{date:yyyy-MM-dd}_done.txt";
-            return Path.Combine(name, bak);
+            if (name != null)
+            {
+                var date = DateTime.Today.AddDays(-1);
+                var bak = $"{date:yyyy-MM-dd}_done.txt";
+                return Path.Combine(name, bak);
+            }
+            GeneralError("Unable to resolve tasks file name");
+            return string.Empty;
         }
 
 
@@ -139,7 +145,7 @@ namespace Tasker
 
         private static void CleanBackups()
         {
-            GeneralOutput("not implemented yet");
+            GeneralOutput("clean backups not implemented yet");
             //var dir = Path.GetDirectoryName(GetTasksFile());
         }
 

@@ -1,26 +1,20 @@
-﻿//todo:
+﻿// Tasker © 2024 by Rob Uttley is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/
+
+//todo:
 /*
  * - renum command
  * - clean command
  * 
  * - ability to fetch the files from somewhere else (tasker.cfg)
  * - also a 'quiet' option in cfg
- * - cfg file auto-generated if not present
  * 
  * - test on Mac
  * - put in GH as public
+ * 
  */
 
 
 using System.CommandLine;
-using System.CommandLine.Invocation;
-using CsvHelper;
-using System.IO;
-using System.Globalization;
-using System;
-using CsvHelper.Configuration;
-using System.Threading.Tasks;
-using System.Net;
 
 namespace Tasker
 {
@@ -29,8 +23,8 @@ namespace Tasker
         static string _tasksfile = "tasks.txt";
         static string _donefile = "done.txt";
 
-        private static List<TaskerTask> taskerTasks = new List<TaskerTask>();
-        private static List<TaskerDone> taskerDone = new List<TaskerDone>();
+        private static List<TaskerTask> taskerTasks = [];
+        private static List<TaskerDone> taskerDone = [];
 
 
         static async Task<int> Main(string[] args)
@@ -104,6 +98,9 @@ namespace Tasker
             //tasker renum
             var renumberCommand = new Command("renum", "Renumber the existing tasks (active and sleeping)") { };
 
+            //tasker clean
+            var resetCommand = new Command("reset", "Remove all tasks, clean all backups") { };
+
             // instantiate commands; they appear in this order at the 'help' prompts 
 
             rootCommand.AddCommand(addCommand);
@@ -114,6 +111,7 @@ namespace Tasker
             rootCommand.AddCommand(removeCommand);
             rootCommand.AddCommand(renumberCommand);
             rootCommand.AddCommand(cleanCommand);
+            rootCommand.AddCommand(resetCommand);
 
 
             // setup handlers
@@ -171,6 +169,13 @@ namespace Tasker
                 DoClean(); 
             });
 
+
+            resetCommand.SetHandler(() =>
+            {
+                DoReset();
+            });
+
+            LoadConfig();
 
             // execute command
             return rootCommand.InvokeAsync(args).Result;

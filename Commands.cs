@@ -1,14 +1,4 @@
-﻿using System.CommandLine;
-using System.CommandLine.Invocation;
-using CsvHelper;
-using System.IO;
-using System.Globalization;
-using System;
-using CsvHelper.Configuration;
-using System.Threading.Tasks;
-using System.Net;
-
-namespace Tasker
+﻿namespace Tasker
 {
     partial class Program
     {
@@ -26,19 +16,26 @@ namespace Tasker
                 name = split[0];
                 desc = split[1];
             }
-            // remove any protective quotes
+            // remove any protective quotes that were only there to help us get spaces passed in
             name = name.Trim('"');
             desc = desc.Trim('"');
 
             // sleeping by default?
             var sleep = sleeping ? GetNow() : NOT_SLEEPING;
 
-            //todo: validate 'recurs'
-
             if (name == string.Empty)
             {
                 GeneralError("Bad or missing task name");
                 return;
+            }
+
+            if (recurs != string.Empty)
+            {
+                if (!ValidateRecurring(recurs))
+                {
+                    GeneralError($"Bad 'recurring' value ({recurs})");
+                    return;
+                }
             }
 
             LoadTasks();
@@ -57,27 +54,26 @@ namespace Tasker
 
         }
 
+
         private static void DoSleep(string id)
         {
             LoadTasks();
             var task = GetTaskFromArgId(id);
-            if (task != null)
-            {
-                if (task.Sleeping != NOT_SLEEPING)
-                {
-                    GeneralError($"Task '{id}' not awake");
-                }
-                else
-                {
-                    task.Sleeping = GetNow();
-                    SaveTasks();
-                    GeneralOutput($"Task {task.Id} ({task.Name}) now sleeping");
-                }
-            }
-            else
+            if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
                 ListTasks();
+                return;
+            }
+            if (task.Sleeping != NOT_SLEEPING)
+            {
+                GeneralError($"Task '{id}' not awake");
+            }
+            else
+            {
+                task.Sleeping = SLEEPING;
+                SaveTasks();
+                GeneralOutput($"Task {task.Id} ({task.Name}) now sleeping");
             }
 
         }
@@ -96,27 +92,27 @@ namespace Tasker
             }
         }
 
+
         private static void DoWake(string id)
         {
             LoadTasks();
             var task = GetTaskFromArgId(id);
-            if (task != null)
-            {
-                if (task.Sleeping == NOT_SLEEPING)
-                {
-                    GeneralError($"Task '{id}' not sleeping");
-                }
-                else
-                {
-                    task.Sleeping = NOT_SLEEPING;
-                    SaveTasks();
-                    GeneralOutput($"Task {task.Id} ({task.Name}) now awake");
-                }
-            }
-            else
+            if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
                 ListTasks();
+                return;
+            }
+
+            if (task.Sleeping == NOT_SLEEPING)
+            {
+                GeneralError($"Task '{id}' not sleeping");
+            }
+            else
+            {
+                task.Sleeping = NOT_SLEEPING;
+                SaveTasks();
+                GeneralOutput($"Task {task.Id} ({task.Name}) now awake");
             }
 
         }
@@ -126,52 +122,92 @@ namespace Tasker
         {
             LoadTasks();
             var task = GetTaskFromArgId(id);
-            if (task != null)
-            {
-                if (task.Sleeping != NOT_SLEEPING)
-                {
-                    GeneralError($"Task '{id}' is sleeping");
-                }
-                else
-                {
-                    LoadDone();
-                    taskerDone.Add(new TaskerDone()
-                    {
-                        Completed = DateTime.Now,
-                        Id = task.Id,
-                        Name = task.Name,
-                        Description = task.Description,
-                        Recurring = task.Recurring,
-                        Sleeping = task.Sleeping
-                    }
-                    );
-                    SaveDone();
-                    //todo: manage recurring tasks
-                    taskerTasks.Remove(task);
-                    SaveTasks();
-                    GeneralOutput($"Task {task.Id} ({task.Name}) completed");
-                }
-            }
-            else
+            if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
                 ListTasks();
+                return;
+            }
+            if (task.Sleeping != NOT_SLEEPING)
+            {
+                GeneralError($"Task '{id}' is sleeping");
+            }
+            else
+            {
+                LoadDone();
+                taskerDone.Add(new TaskerDone()
+                {
+                    Completed = DateTime.Now,
+                    Id = task.Id,
+                    Name = task.Name,
+                    Description = task.Description,
+                    Recurring = task.Recurring,
+                    Sleeping = task.Sleeping
+                }
+                );
+                SaveDone();
+
+                //todo: manage recurring tasks
+                if (task.Recurring != string.Empty)
+                {
+                    // calculate new sleeping time based on 'recurring' setting, update task
+                    task.Sleeping = GetNextSleep(task.Recurring);
+                    GeneralOutput($"Task {task.Id} ({task.Name}) will recur on {task.Sleeping}");
+                }
+                else
+                {
+                    GeneralOutput($"Task {task.Id} ({task.Name}) completed");
+                    taskerTasks.Remove(task);
+                }
+                // either way, save the list
+                SaveTasks();
+
             }
         }
 
 
         private static void DoRenum()
-        { }
+        {
+            if (!ShowYNPrompt("Renumber tasks?")) return;
+            GeneralOutput("renumber not implemented yet");
+
+        }
 
 
         private static void DoClean()
-        { }
+        {
+            if (!ShowYNPrompt("Clean - all backups will be deleted?")) return;
+            CleanBackups();
+        }
+
+
+        private static void DoReset()
+        {
+            if (!ShowYNPrompt("Reset everything - all tasks and backups will be deleted?")) return;
+            taskerTasks.Clear();
+            taskerDone.Clear();
+            SaveTasks();
+            SaveDone();
+            CleanBackups();
+            GeneralOutput("All tasks removed, all completed tasks removed, all backups removed");
+        }
 
 
         private static void DoRemove(string id)
-        { }
-
-
+        {
+            LoadTasks();
+            var task = GetTaskFromArgId(id);
+            if (task == null)
+            {
+                GeneralError($"Task '{id}' not found");
+                ListTasks();
+                return;
+            }
+            if (!ShowYNPrompt($"Remove task {task.Id} ({task.Name})?")) return;
+            taskerTasks.Remove(task);
+            SaveTasks();
+            GeneralOutput($"Task {task.Id} ({task.Name}) removed");
+        }
 
 
     }

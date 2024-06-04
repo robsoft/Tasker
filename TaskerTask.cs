@@ -28,6 +28,15 @@ namespace Tasker
             public string Recurring { get; set; }
             public string Sleeping { get; set; }
             public string Description { get; set; }
+
+            public TaskerTask()
+            {
+                Id = BAD_TASK_ID;
+                Name = string.Empty;
+                Recurring = string.Empty;
+                Sleeping = NOT_SLEEPING;
+                Description = string.Empty;
+            }
         }
 
     }
