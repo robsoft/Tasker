@@ -2,18 +2,28 @@
 
 //todo:
 /*
- * - renum command
+ * - some kind of verbose option to easily flip the config option
+
  * - clean command
- * 
+ * - finish tidying output
+ * - tidy-up inputs (capitalise recurring etc)
+ * - think about sub tasks ....
+ *   probably tasker sub 11 "thingy" (no recurring or sleeping)
+ *   adds a task to 11 (how many levels, how to store in the csv file)
+ *   
  * - ability to fetch the files from somewhere else (tasker.cfg)
  * - also a 'quiet' option in cfg
- * 
+ *
+ * look at making a single executable with embedded libraries etc
+ * dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+ *  
  * - test on Mac
  * - put in GH as public
  * 
  */
 
 
+using Spectre.Console;
 using System.CommandLine;
 
 namespace Tasker
@@ -38,6 +48,11 @@ namespace Tasker
                 name: "-done",
                 description: "List all done tasks",
                 getDefaultValue: () => false );
+
+            var clearDoneOption = new Option<bool>(
+                name: "-done",
+                description: "Clear only the done tasks",
+                getDefaultValue: () => false);
 
             var listSleepOption = new Option<bool>(
                 name: "-sleep",
@@ -99,7 +114,8 @@ namespace Tasker
             var renumberCommand = new Command("renum", "Renumber the existing tasks (active and sleeping)") { };
 
             //tasker clean
-            var resetCommand = new Command("reset", "Remove all tasks, clean all backups") { };
+            var clearCommand = new Command("clear", "Remove all tasks, optionally just the done tasks")
+            { clearDoneOption };
 
             // instantiate commands; they appear in this order at the 'help' prompts 
 
@@ -111,7 +127,7 @@ namespace Tasker
             rootCommand.AddCommand(removeCommand);
             rootCommand.AddCommand(renumberCommand);
             rootCommand.AddCommand(cleanCommand);
-            rootCommand.AddCommand(resetCommand);
+            rootCommand.AddCommand(clearCommand);
 
 
             // setup handlers
@@ -159,26 +175,38 @@ namespace Tasker
 
 
             renumberCommand.SetHandler( () => 
-            { 
-                DoRenum(); 
-            });
+                { 
+                    DoRenum(); 
+                });
 
 
-            cleanCommand.SetHandler( () => 
-            { 
-                DoClean(); 
-            });
+            clearCommand.SetHandler( (onlyDone) => 
+                { 
+                    DoClear(onlyDone); 
+                },
+                clearDoneOption);
 
 
-            resetCommand.SetHandler(() =>
+            cleanCommand.SetHandler(() =>
             {
-                DoReset();
+                DoClean();
             });
 
-            LoadConfig();
 
-            // execute command
-            return rootCommand.InvokeAsync(args).Result;
+            try
+            {
+                LoadConfig();
+
+                // execute command
+                return rootCommand.InvokeAsync(args).Result;
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex,
+                    ExceptionFormats.ShortenPaths | ExceptionFormats.ShortenTypes |
+                    ExceptionFormats.ShortenMethods);
+                return 1;
+            }
 
         }
 

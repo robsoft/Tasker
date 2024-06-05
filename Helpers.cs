@@ -139,7 +139,28 @@ namespace Tasker
                 Console.WriteLine(message);
             }
         }
-
+        private static void OutputTask(TaskerTask task)
+        {
+            if (config.UseColor)
+            {
+                AnsiConsole.MarkupLine($"[{config.Colors.TitleColor}]{task.Id,3}[/] [{config.Colors.DefaultColor}]{task.Name,-60}[/] [{config.Colors.DescriptionColor}]{task.Recurring,4} {task.Sleeping}[/]");
+            }
+            else
+            {
+                Console.WriteLine($"{task.Id,3} {task.Name,-60} {task.Recurring,4} {task.Sleeping}");
+            }
+        }
+        private static void OutputDone(TaskerDone task)
+        {
+            if (config.UseColor)
+            {
+                AnsiConsole.MarkupLine($"[{config.Colors.TitleColor}]{task.Completed,19} {task.Id,3}[/] [{config.Colors.DefaultColor}]{task.Name,-54}[/]");
+            }
+            else
+            {
+                Console.WriteLine($"{task.Completed,19} {task.Id,3} {task.Name,-54}");
+            }
+        }
 
         private static void TitleOutput(string message)
         {
@@ -183,14 +204,16 @@ namespace Tasker
         }
 
 
-        private static void ListTasks(bool sleep = false)
+        private static void ListTasks(bool output, bool sleep = false)
         {
+            if (!output) return;
+
             if (sleep)
             {
                 TitleOutput("Sleeping Tasks");
                 foreach (var record in taskerTasks.Where(x => x.Sleeping != NOT_SLEEPING))
                 {
-                    GeneralOutput($"{record.Id,3} {record.Name,-60} {record.Recurring,4} {record.Sleeping}");
+                    OutputTask(record);
                     OutputDescription(record.Description);
                 }
 
@@ -200,19 +223,21 @@ namespace Tasker
                 TitleOutput("Active Tasks");
                 foreach (var record in taskerTasks.Where(x => x.Sleeping == NOT_SLEEPING))
                 {
-                    GeneralOutput($"{record.Id,3} {record.Name,-60} {record.Recurring,4}");
+                    OutputTask(record);
                     OutputDescription(record.Description);
                 }
             }
         }
 
 
-        private static void ListDone()
+        private static void ListDone(bool output)
         {
+            if (!output) return;
+
             TitleOutput("Completed Tasks");
             foreach (var record in taskerDone.OrderByDescending(x=>x.Completed))
             {
-                GeneralOutput($"{record.Completed,19} {record.Id,3} {record.Name,-54}");
+                OutputDone(record);
                 OutputDescription(record.Description);
             }
         }

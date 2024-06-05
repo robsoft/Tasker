@@ -1,4 +1,6 @@
-﻿namespace Tasker
+﻿using Spectre.Console;
+
+namespace Tasker
 {
     partial class Program
     {
@@ -40,18 +42,19 @@
 
             LoadTasks();
             var id = GetNextId();
-            taskerTasks.Add(new TaskerTask()
+            var task = new TaskerTask()
             {
                 Id = id,
                 Name = name,
                 Description = desc,
                 Recurring = recurs,
                 Sleeping = sleep
-            }
-            );
+            };
+            taskerTasks.Add(task);
             SaveTasks();
-            ListTasks();
 
+            GeneralOutput($"Added {task.Id} ({task.Name})");
+            ListTasks(config.Verbose);
         }
 
 
@@ -62,7 +65,7 @@
             if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
-                ListTasks();
+                ListTasks(config.Verbose);
                 return;
             }
             if (task.Sleeping != NOT_SLEEPING)
@@ -80,17 +83,32 @@
 
         private static void DoList(bool done, bool sleep)
         {
-            if (done)
-            {
-                LoadDone();
-                ListDone();
-            }
-            else
-            {
-                LoadTasks();
-                ListTasks(sleep);
-            }
+                if (done)
+                {
+                    LoadDone();
+                    if (taskerDone.Count == 0)  
+                    {
+                        GeneralOutput("No completed tasks");
+                    }
+                    else
+                    {
+                        ListDone(true);
+                    }
+                }
+                else
+                {
+                    LoadTasks();
+                    if (taskerTasks.Count==0)
+                    {
+                        GeneralOutput("No active tasks");
+                    }
+                    else
+                    {
+                        ListTasks(true, sleep);
+                    }
+                }
         }
+    
 
 
         private static void DoWake(string id)
@@ -100,7 +118,7 @@
             if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
-                ListTasks();
+                ListTasks(config.Verbose);
                 return;
             }
 
@@ -125,7 +143,7 @@
             if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
-                ListTasks();
+                ListTasks(config.Verbose);
                 return;
             }
             if (task.Sleeping != NOT_SLEEPING)
@@ -170,7 +188,14 @@
         {
             if (!ShowYNPrompt("Renumber tasks?")) return;
             GeneralOutput("renumber not implemented yet");
-
+            LoadTasks();
+            int id = 1;
+            foreach(var task in taskerTasks.OrderBy(x=>x.Id).OrderBy(x=>x.Name))
+            {
+                task.Id = id++;
+            }
+            SaveTasks();
+            ListTasks(config.Verbose);
         }
 
 
@@ -181,15 +206,24 @@
         }
 
 
-        private static void DoReset()
+        private static void DoClear(bool doneOnly)
         {
-            if (!ShowYNPrompt("Reset everything - all tasks and backups will be deleted?")) return;
-            taskerTasks.Clear();
-            taskerDone.Clear();
-            SaveTasks();
-            SaveDone();
-            CleanBackups();
-            GeneralOutput("All tasks removed, all completed tasks removed, all backups removed");
+            if (doneOnly)
+            {
+                LoadDone();
+                if (!ShowYNPrompt("Clear all completed tasks?")) return;
+                taskerDone.Clear();
+                SaveDone();
+                GeneralOutput("All completed tasks removed");
+            }
+            else
+            {
+                LoadTasks();
+                if (!ShowYNPrompt("Clear all tasks?")) return;
+                taskerTasks.Clear();
+                SaveTasks();
+                GeneralOutput("All tasks removed");
+            }
         }
 
 
@@ -200,7 +234,7 @@
             if (task == null)
             {
                 GeneralError($"Task '{id}' not found");
-                ListTasks();
+                ListTasks(config.Verbose);
                 return;
             }
             if (!ShowYNPrompt($"Remove task {task.Id} ({task.Name})?")) return;
