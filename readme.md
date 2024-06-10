@@ -1,6 +1,17 @@
 ﻿# Tasker  
 Tasker © 2024 by Rob Uttley is licensed under CC BY 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by/4.0/
 
+## 10/06/2024  
+[ ] Update this doc  
+[ ] Fix crash when no config  
+[ ] Fix crash when no tasks or done files  
+[ ] Complete the CLEAN, CLEAR stuff
+
+
+
+
+
+## Overview  
 * command-line, Windows & Mac  
 * just needs to be somewhere on the system path  
 * in the same folder as the executable are the tasks.txt and done.txt  
